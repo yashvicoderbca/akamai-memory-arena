@@ -1,7 +1,8 @@
+//===========================================================================
 //PROJECT STATUS: DAY1 (PART1) COMPLETE
 //CURRENT STATE: CORE Structure and initization logic are done.
 //NEXT STEP: PART2 (BLOCK SPLITTING AND ALLOCATION) WILL BE ADDED TOM0RROW.
-
+//=============================================================================
 /** 
  *@file main.cpp
  *@brief custom fixed-size memory Arena(pool Allocator) for low-latency systems.
