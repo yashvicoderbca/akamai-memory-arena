@@ -1,8 +1,7 @@
-//===========================================================================
-//PROJECT STATUS: DAY1 (PART1) COMPLETE
-//CURRENT STATE: CORE Structure and initization logic are done.
-//NEXT STEP: PART2 (BLOCK SPLITTING AND ALLOCATION) WILL BE ADDED TOM0RROW.
-//=============================================================================
+// PROJECT STATUS: DAY2(PART 1 AND PART2 COMPLETE)
+// CURRENT STATE: CORE STRUCTURE + INITIALIZATION + SPLITTING ALLOCATION DONE
+// NEXT STEP:PART3(FREE/DEALLOCATION LOGIC) WILL BE ADDED SOON
+
 /** 
  *@file main.cpp
  *@brief custom fixed-size memory Arena(pool Allocator) for low-latency systems.
@@ -54,6 +53,42 @@ class CustomMemoryManager {
             <<"bytes initialized at the base address:"<<(void*)total_memory_pool<<endl;
     }
     /** 
+     * @brief PART2: Block splitting and allocation logic
+     * @param size bytes requested by the user
+     * @return void* pointer to the alloaction memory area
+     */
+     void* alloc(size_t size){
+        //Line 1 and 2 : iterate through the vector tracking register(metadata table)
+        for(size_t i=0; i<block_list.size();++i){
+            // line3: first-fit strategy-check if the block is free and has sufficient capacity 
+            if(block_list[i].is_free && block_list[i].size>=size){
+                //line4: splliting decision- trigger split if the block size strictly exceeds the requested size
+                if(block_list[i].size>size){
+                    // line5:calculate the hardware memory adress and the remaining size for the new residual block
+                    //new address= base address of current block + bytes requested by user
+                    char* next_block_ptr=block_list[i].memory_ptr+size;
+                    size_t next_block_size=block_list[i].size-size;
+
+                    // line6: instantiate metadata descriptior for the new residual free block
+                    Block next_block={next_block_size,true,next_block_ptr};
+                    //line7: shrink the current block logical size to match exact user demand
+                    block_list[i].size=size;
+                    //dynamically insert the new free block description immediately after the current block in the vector register
+                    block_list.insert(block_list.begin()+i+1,next_block);
+                }
+                //line8: mark the current block as occupied/allocated
+                block_list[i].is_free=false;
+                cout<<"[ALLOCATED]:"<<size<<"bytes given at adress:"
+                <<(void*)block_list[i].memory_ptr<<endl;
+                //line9: return the direct hardware address to the user for safe data writing
+                //(no header skip layout adjustement needed since metadata is off-loaded to std::vector)
+                return(void*)block_list[i].memory_ptr;
+            }
+        }
+        cout<<"[ERROR]: OUT OF MEMORY OR NOT SUITABLE block FOUND"<<endl;
+        return nullptr;
+     }
+    /** 
      * @brief Destructor-safe release of the shared pool boundary to prevent memory leaks.
      */
     CustomMemoryManager(){
@@ -69,5 +104,12 @@ int main(){
     // instantiate a 1KB Memory pool for edge-worker thread simulations
     const size_t ARENA_SIZE=1024;
     CustomMemoryManager akamai_pool(ARENA_SIZE);
+    // TEST ALLOACTION (PART2 TESTING)
+    cout<<"\n--- testing part 2 allocation ----\n"<<endl;
+    void* user1=akamai_pool.alloc(100);//requesting 1st continuous slice of 100 bytes from the managed pool
+    void* user2=akamai_pool.alloc(200);//requesting 2nd continuous slice of 200 bytes from the remaining pool capacity
+    cout<<endl;
     return 0;
 }
+
+
