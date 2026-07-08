@@ -1,7 +1,6 @@
-// PROJECT STATUS: DAY2(PART 1 AND PART2 COMPLETE)
-// CURRENT STATE: CORE STRUCTURE + INITIALIZATION + SPLITTING ALLOCATION DONE
-// NEXT STEP:PART3(FREE/DEALLOCATION LOGIC) WILL BE ADDED SOON
-
+// PROJECT STATUS:DAY3(PART 1 + PART 2 + PART 3 COMPLECTED)
+//CURRENT STATE: CORE STRUCTURE + INITIALIZATION + SPLITTING + COALESCING FREE LOGIC DONE
+//NEXT STEP: FINAL BENCHMARKING AND TESTING COMPLETE
 /** 
  *@file main.cpp
  *@brief custom fixed-size memory Arena(pool Allocator) for low-latency systems.
@@ -89,6 +88,35 @@ class CustomMemoryManager {
         return nullptr;
      }
     /** 
+     * @brief PART3: DEALLOCATION AND ADJACENCY MERGING(COALESING) LOGIC
+     * @PARAM ptr harware address pointer that needs to be released
+     */
+    void free(void*ptr){
+        if(ptr==nullptr) return;
+        //step1: locate the metadata descriptor mapping to this raw hardware address
+        for(size_t i=0;i<block_list.size();++i){
+            if(block_list[i].memory_ptr==(char*)ptr){
+                //step2:mark the found block descriptor as free
+                block_list[i].is_free=true;
+                cout<<"[FREED]:Block of size"<<block_list[i].size<<"bytes released at adress:"<<ptr<<endl;
+                //step3: forward coalesing-merge with the adjacent next block if it is free
+                if(i+1<block_list.size()&& block_list[i+1].is_free){
+                    block_list[i].size+=block_list[i+1].size;//absorb size
+                    block_list.erase(block_list.begin()+i+1);//delete duplicate metadata descriptor
+                    cout<<"-->[MERGE]:coalesced with the adjacent NEXT block."<<endl;
+                }
+                //step4: backward coalescing-merge with the adjacent previous block if it is free
+                if(i>0 && block_list[i-1].is_free){
+                    block_list[i-1].size+=block_list[i].size;//previous block absorbs current size
+                    block_list.erase(block_list.begin()+i);//delete current metadata descriptor
+                    cout<<"-->[MERGE]:coalesced with the adjacent privious block."<<endl;
+                }
+                return;
+            }
+        }
+        cout<<"[ERROR]: invalied pointer deallocation attempted"<<endl;
+    }
+    /** 
      * @brief Destructor-safe release of the shared pool boundary to prevent memory leaks.
      */
     CustomMemoryManager(){
@@ -108,8 +136,13 @@ int main(){
     cout<<"\n--- testing part 2 allocation ----\n"<<endl;
     void* user1=akamai_pool.alloc(100);//requesting 1st continuous slice of 100 bytes from the managed pool
     void* user2=akamai_pool.alloc(200);//requesting 2nd continuous slice of 200 bytes from the remaining pool capacity
+
+    cout<<"\n--- testing part 3 deallocation and merging----n"<<endl;
+    akamai_pool.free(user1);//freeing 1st block(no adjacent merge yet)
+    akamai_pool.free(user2);//freeing 1st block(will merge with user 1 and remaining arena)
     cout<<endl;
     return 0;
 }
+
 
 
