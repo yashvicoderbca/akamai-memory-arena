@@ -1,6 +1,6 @@
-// PROJECT STATUS:DAY3(PART 1 + PART 2 + PART 3 COMPLECTED)
-//CURRENT STATE: CORE STRUCTURE + INITIALIZATION + SPLITTING + COALESCING FREE LOGIC DONE
-//NEXT STEP:PART 4 (VISUALIZATION ENGINE AND DUMP FUNCTION) WILL COME SOON
+// PROJECT STATUS:DAY4(PART 1 + PART 2 + PART 3 + PART4 COMPLETE)
+//CURRENT STATE: CORE STRUCTURE + INITIALIZATION + SPLITTING + COALESCING + VISUALIZATION MAP DONE.
+//NEXT STEP:PART 5 (FRAGMENTATION AND STRESS TESTING SUBSYSTEM) WILL COME SOON
 /** 
  *@file main.cpp
  *@brief custom fixed-size memory Arena(pool Allocator) for low-latency systems.
@@ -116,6 +116,23 @@ class CustomMemoryManager {
         }
         cout<<"[ERROR]: invalied pointer deallocation attempted"<<endl;
     }
+     /** 
+      * @brief PART4: visualization engine/ Arena DUMP
+      */
+     void dump_arena(){
+        cout<<"\n==========CURRENT MEMORY ARENA MAP=============="<<endl;
+        for(size_t i=0; i<block_list.size(); ++i){
+            if(block_list[i].is_free){
+                cout<<"[FREE| SIZE:"<<block_list[i].size<<"B]";
+            } else{
+                cout<<"[ALLOCATED| SIZE:"<<block_list[i].size<<"B]";
+            }
+            if(i+1<block_list.size()){
+                cout<<"----->";
+            }
+        }
+        cout<<"\n===================================================================="<<endl;
+     }
     /** 
      * @brief Destructor-safe release of the shared pool boundary to prevent memory leaks.
      */
@@ -136,13 +153,15 @@ int main(){
     cout<<"\n--- testing part 2 allocation ----\n"<<endl;
     void* user1=akamai_pool.alloc(100);//requesting 1st continuous slice of 100 bytes from the managed pool
     void* user2=akamai_pool.alloc(200);//requesting 2nd continuous slice of 200 bytes from the remaining pool capacity
-
+    // PART 4 INTEGRATION: RENDER VISUAL SNAPSHOT OF THE MEMORY LAYOUT IMMEDIATELY AFTER ALLOCATIONS
+    akamai_pool.dump_arena();
     cout<<"\n--- testing part 3 deallocation and merging----n"<<endl;
     akamai_pool.free(user1);//freeing 1st block(no adjacent merge yet)
+    //PART 4 INTEGRATION: RENDER LAYOUT TO VERFIFY LOCALIZED DEALLOCATION WITHOUT CASCADING MERGES
+    akamai_pool.dump_arena();
     akamai_pool.free(user2);//freeing 1st block(will merge with user 1 and remaining arena)
+    //PART 4 INTEGRATION: FINAL STRUCTURAL AUDIT TO CONFIRM ARENA HAS SUCCESSFULLY MERGED BACK INTO A SINGLE BLOCK
+    akamai_pool.dump_arena();
     cout<<endl;
     return 0;
 }
-
-
-
