@@ -1,6 +1,6 @@
-// PROJECT STATUS:DAY4(PART 1 + PART 2 + PART 3 + PART4 COMPLETE)
-//CURRENT STATE: CORE STRUCTURE + INITIALIZATION + SPLITTING + COALESCING + VISUALIZATION MAP DONE.
-//NEXT STEP:PART 5 (FRAGMENTATION AND STRESS TESTING SUBSYSTEM) WILL COME SOON
+// PROJECT STATUS:DAY4(PART 1 + PART 2 + PART 3 + PART4 + PART 5 COMPLETE)
+//CURRENT STATE: CORE STRUCTURE + INITIALIZATION + SPLITTING + COALESCING + VISUALIZATION MAP + DYNAMIC FRAGMENTATION ANALYTICS SUBSYSTEM DONE
+//NEXT STEP:PART 6 (ADVANCED ALLOCATION ALOGORITHMS AND PERFORMANCE TURNING) WILL COME SOON
 /** 
  *@file main.cpp
  *@brief custom fixed-size memory Arena(pool Allocator) for low-latency systems.
@@ -133,6 +133,35 @@ class CustomMemoryManager {
         }
         cout<<"\n===================================================================="<<endl;
      }
+     /** 
+      * @brief PART5: FRAGMENTATION ANALYSIS SUBSYSTEM
+      * CALCULATES THE INTERNAL BLOCK LAYOUT STATE TO VERIFY MEMORY EFFICIENCY
+      */
+      void analyze_fragmentataion(){
+        size_t free_blocks_count=0;
+        size_t total_free_memory=0;
+        size_t largest_free_blocks=0;
+
+        for(size_t i=0; i<block_list.size();++i){
+            if(block_list[i].is_free){
+                free_blocks_count++;
+                total_free_memory += block_list[i].size;
+                if(block_list[i].size>largest_free_blocks){
+                    largest_free_blocks = block_list[i].size;
+                }
+            }
+        }
+        cout<<"\n [METRICS][FRAGMENTATION REPORT]:"<<endl;
+        cout<<"  -> total segment counts:"<<block_list.size()<<"blocks metadata mapped."<<endl;
+        cout<<"  -> scattered vacant segments:"<<free_blocks_count<<"discrete free blocks."<<endl;
+        cout<<"  -> cumulative residual capacity:"<<total_free_memory<<"bytes available."<<endl;
+        cout<<"  -> maximum continuous allocation window:"<<largest_free_blocks<<"bytes."<<endl;
+        if(free_blocks_count>1){
+            cout<<" -> NOTICE: MEMORY fragmentation detected. coalescing subsystem operating on standby"<<endl;
+        } else{
+            cout<<"  -> NOTICE: arena is perfectly contiguous. zero fragmentation overhead detected"<<endl;
+        }
+      }
     /** 
      * @brief Destructor-safe release of the shared pool boundary to prevent memory leaks.
      */
@@ -162,6 +191,28 @@ int main(){
     akamai_pool.free(user2);//freeing 1st block(will merge with user 1 and remaining arena)
     //PART 4 INTEGRATION: FINAL STRUCTURAL AUDIT TO CONFIRM ARENA HAS SUCCESSFULLY MERGED BACK INTO A SINGLE BLOCK
     akamai_pool.dump_arena();
+    // EXECUTION PHASE 3: STRESS TESTING AND FRAGMENTATION METRICS(PART 5 TESTING)
+    cout<<"\n---STARTING PART 5: DYNAMIC STRESS TESTING SUB-ROUTE--"<<endl;
+    //allocates 3 blocks sequentially to generate multiple segments
+    void* blockA = akamai_pool.alloc(150);
+    void* blockB = akamai_pool.alloc(250);
+    void* blockC = akamai_pool.alloc(350);
+    akamai_pool.dump_arena(); 
+    // free middle block B purposefully to introduce simulated memory fragmentation
+    cout<<"\n[ACTION]: freeing blockB to inject artificial structural fragmentation"<<endl;
+    akamai_pool.free(blockB);
+    //render map and audit fragmentation
+    akamai_pool.dump_arena();
+    akamai_pool.analyze_fragmentataion();
+    //clean up remaining allocations to test final system reset integrity
+    cout<<"\n[ACTION]: releasing remaining stress blocks to guarantee clean shutdown states"<<endl;
+    akamai_pool.free(blockA);
+    akamai_pool.free(blockC);
+    akamai_pool.dump_arena();
+    akamai_pool.analyze_fragmentataion();
+
     cout<<endl;
     return 0;
 }
+
+
