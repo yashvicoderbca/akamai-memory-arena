@@ -1,6 +1,6 @@
-// PROJECT STATUS:DAY4(PART 1 + PART 2 + PART 3 + PART4 + PART 5 COMPLETE)
-//CURRENT STATE: CORE STRUCTURE + INITIALIZATION + SPLITTING + COALESCING + VISUALIZATION MAP + DYNAMIC FRAGMENTATION ANALYTICS SUBSYSTEM DONE
-//NEXT STEP:PART 6 (ADVANCED ALLOCATION ALOGORITHMS AND PERFORMANCE TURNING) WILL COME SOON
+// PROJECT STATUS:DAY4(PART 1 + PART 2 + PART 3 + PART4 + PART 5 +PART 6 COMPLETE)
+//CURRENT STATE: CORE STRUCTURE + INITIALIZATION + SPLITTING + COALESCING + VISUALIZATION MAP + DYNAMIC FRAGMENTATION ANALYTICS SUBSYSTEM +ADVANCED ALLOCATION ALOGORITHMS AND PERFORMANCE TURNING DONE
+//NEXT STEP:PART 7 (PERFORMANCE BENCHMARKING AND TESTING) WILL COME SOON
 /** 
  *@file main.cpp
  *@brief custom fixed-size memory Arena(pool Allocator) for low-latency systems.
@@ -15,6 +15,12 @@
 #include <vector>
 #include <cstddef> // Required for size_t alignment tracking
 using namespace std;
+
+// ENUMS AND STRUCTURE (MUST BE DEFINED FIRST)
+enum AllocationStrategy{
+    FIRST_FIT,
+    BEST_FIT
+};
 /** 
  * @struct Block
  * @brief Memory segment descriptor (Allocation metadata)
@@ -34,14 +40,15 @@ class CustomMemoryManager {
     private:
     char* total_memory_pool;// base address pointer of the physical heap allocation
     size_t pool_size;// total capacity threshold of the allocated memory arena
-    vector<Block> block_list;// Allocation table tracking physical segments logically 
+    vector<Block> block_list;// Allocation table tracking physical segments logically
+    AllocationStrategy current_strategy;// Strategy tracking state token
 
     public:
     /** 
      * @brief constructor - pre-allocates the total memory arena from OS heap.
      * @param size total continuous bytes to pool up-front.
      */
-    CustomMemoryManager(size_t size):pool_size(size){
+    CustomMemoryManager(size_t size):pool_size(size), current_strategy(FIRST_FIT){
         // core hardware allocation via system heap
         total_memory_pool= new char[pool_size];
         // logical initialization: bootstrap the arena as one large free block
@@ -50,41 +57,75 @@ class CustomMemoryManager {
         block_list.push_back(initial_block);
         cout<<"[SUCCESS][INIT]: Manager Arena of"<<pool_size
             <<"bytes initialized at the base address:"<<(void*)total_memory_pool<<endl;
+            cout<<" -> operational policy: defaulting to first-fit strategy."<<endl;
     }
     /** 
-     * @brief PART2: Block splitting and allocation logic
-     * @param size bytes requested by the user
-     * @return void* pointer to the alloaction memory area
+     * @brief PART6: dynamic strategy configuration modifer
+     * @param strategy the target selection algorithm(FIRST_FIT/ BEST_FIT)
+     */
+    void set_allocation_strategy(AllocationStrategy strategy){
+        current_strategy = strategy;
+        cout<<"\n [STRATEGY CHANGED]: allocation policy successfully switched to:"<<(current_strategy== FIRST_FIT?"FIRST_FIT":"BEST_FIT")<<endl;
+    }
+    /** 
+     * @brief EXTENDED PART2 AND PART6: universal allocation routing interface
+     * @details implements a dual engine architecture capable of executing instantaneous linear
+     * discovered mapping(first-fit) or optimised scanning for fragmentation reduction(best-fit)
+     *@param size bytes requested by the user application playload
+     *@return void*contiguous memory pointer aligned to the requested block profile
      */
      void* alloc(size_t size){
-        //Line 1 and 2 : iterate through the vector tracking register(metadata table)
-        for(size_t i=0; i<block_list.size();++i){
-            // line3: first-fit strategy-check if the block is free and has sufficient capacity 
-            if(block_list[i].is_free && block_list[i].size>=size){
-                //line4: splliting decision- trigger split if the block size strictly exceeds the requested size
-                if(block_list[i].size>size){
-                    // line5:calculate the hardware memory adress and the remaining size for the new residual block
-                    //new address= base address of current block + bytes requested by user
-                    char* next_block_ptr=block_list[i].memory_ptr+size;
-                    size_t next_block_size=block_list[i].size-size;
-
-                    // line6: instantiate metadata descriptior for the new residual free block
-                    Block next_block={next_block_size,true,next_block_ptr};
-                    //line7: shrink the current block logical size to match exact user demand
-                    block_list[i].size=size;
-                    //dynamically insert the new free block description immediately after the current block in the vector register
-                    block_list.insert(block_list.begin()+i+1,next_block);
+        int chosen_index = -1;
+        // -----PART 6 STRATEGY ROUNTING BRANCH------
+        if(current_strategy==FIRST_FIT){
+            /**
+             * @brief first-fit rounting engine
+             * scan the tracking table sequentially and registers the absolute first available
+             * segment that can satisfy the exact payload size. prioritizes execution velocity
+             */
+            for(size_t i=0; i<block_list.size();++i){
+                if(block_list[i].is_free && block_list[i].size>=size){
+                    chosen_index=(int)i;
+                    break;//deterministic early exit loop optimization
                 }
-                //line8: mark the current block as occupied/allocated
-                block_list[i].is_free=false;
-                cout<<"[ALLOCATED]:"<<size<<"bytes given at adress:"
-                <<(void*)block_list[i].memory_ptr<<endl;
-                //line9: return the direct hardware address to the user for safe data writing
-                //(no header skip layout adjustement needed since metadata is off-loaded to std::vector)
-                return(void*)block_list[i].memory_ptr;
             }
         }
-        cout<<"[ERROR]: OUT OF MEMORY OR NOT SUITABLE block FOUND"<<endl;
+        else if (current_strategy == BEST_FIT){
+            /** 
+             *@brief best-fit optimization routing engine
+             *iterates completely through the tracking descriptors to pinpoint the structural layout.
+             *hole that minimizes waste space.minimizes internal remnants to prevent fragmentation.
+             */
+            size_t tightest_remnants = -1; // initialize to maximum scaler value to serve as theoretical infinity
+            for(size_t i = 0; i<block_list.size();++i){
+                // core filter: block validation checks (vacancy status and size threshold constraints)
+                if(block_list[i].is_free && block_list[i].size>=size){
+                    size_t leftover = block_list[i].size - size;
+                    //optimization strategy: retain the chunk providing the smallest residual payload window
+                    if(leftover<tightest_remnants){
+                        tightest_remnants = leftover;
+                        chosen_index=(int)i;//lock down the index of the current optimal block candidate
+    
+                    }
+                }
+            }
+        }
+        //----ALLOCATION EXECUTION ENGINE---
+        if(chosen_index != -1){
+            size_t idx = (size_t)chosen_index;
+            // splitting validation check: split memory segment if capacity exceeds requested footprint
+            if(block_list[idx].size>size){
+                char* next_block_ptr = block_list[idx].memory_ptr + size;
+                size_t next_block_size = block_list[idx].size - size;
+                Block next_block = {next_block_size, true,next_block_ptr};
+                block_list[idx].size = size;
+                block_list.insert(block_list.begin()+ idx + 1, next_block);
+            }
+            block_list[idx].is_free = false;
+            cout<<"["<<(current_strategy==FIRST_FIT? "FIRST-FIT": "BEST-FIT")<<"ALLOC]:"<<size<<"bytes mapped at adress:"<<(void*)block_list[idx].memory_ptr<<endl;
+            return (void*)block_list[idx].memory_ptr;
+        }
+        cout<<"[ERROR]: allocation failure no valid chunk matches requested block size:"<<size<<"bytes"<<endl;
         return nullptr;
      }
     /** 
@@ -210,9 +251,38 @@ int main(){
     akamai_pool.free(blockC);
     akamai_pool.dump_arena();
     akamai_pool.analyze_fragmentataion();
-
+    //"----ADDING PART 6 STARTING HERE: DYNAMIC BEST-FIT STRATEGY BENCHMARK"
+    //1 SETUP PHASE: CREATE THE  FRAGMENTATION LANDSCAPE (300B AND 150B HOLES)
+    cout<<"step 1: building bechmark layout(300 and 150 holes)"<<endl;
+    void* hole1 = akamai_pool.alloc(300);// will become free hole 1 (300b)
+    void* seperator = akamai_pool.alloc(100);//occupied buffer block to prevent merging
+    void* hole2 = akamai_pool.alloc(150);//will become free hole 2 (150b)
+    void* remainder = akamai_pool.alloc(450);//occupied block taking up the rest of the pool (1024-1000=24b left)
+    // 2 release the target slots to inject localized holes
+    cout<<"[ACTION]: RELEASING 300B AND 150B blocks into the arena.."<<endl;
+    akamai_pool.free(hole1);
+    akamai_pool.free(hole2);
+    //view current status before evaluating algorithms
+    akamai_pool.dump_arena();
+    // 3 execution path A: TEST WITH STANDARD FIRSTFIRST-FIT POLICY
+    akamai_pool.set_allocation_strategy(FIRST_FIT);
+    cout<<"[TEST]: requesting 120b allocation using FIRST-FIT..."<<endl;
+    void* test_ff = akamai_pool.alloc(120);
+    akamai_pool.dump_arena();//will show that it cut into the 300b hole instantly
+    //reset state for an identical clean best-fit evaluation
+    cout<<"[RESET]: releasing FIRST-FIT tracking slot to restore the 300b hole..."<<endl;
+    akamai_pool.free(test_ff);
+    //4 execution path B: switch dynamically and test with BEST-FIT policy
+    akamai_pool.set_allocation_strategy(BEST_FIT);
+    cout<<"[TEST]: requesting 120B allocation using BEST-FIT..."<<endl;
+    void* test_bf = akamai_pool.alloc(120);
+    akamai_pool.dump_arena();// will show that it intelligently picked the tighter 150B hole
+    //final cleanup of all allocation to enshure safe arena destruction 
+    cout<<"[ACTION]: Cleaning remaining benchmark payloads for the safe system shutdown..."<<endl;
+    akamai_pool.free(test_bf);
+    akamai_pool.free(seperator);
+    akamai_pool.free(remainder);
     cout<<endl;
     return 0;
 }
-
-
+}
