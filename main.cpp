@@ -1,6 +1,19 @@
-// PROJECT STATUS:DAY4(PART 1 + PART 2 + PART 3 + PART4 + PART 5 +PART 6 COMPLETE)
-//CURRENT STATE: CORE STRUCTURE + INITIALIZATION + SPLITTING + COALESCING + VISUALIZATION MAP + DYNAMIC FRAGMENTATION ANALYTICS SUBSYSTEM +ADVANCED ALLOCATION ALOGORITHMS AND PERFORMANCE TURNING DONE
-//NEXT STEP:PART 7 (PERFORMANCE BENCHMARKING AND TESTING) WILL COME SOON
+/**
+*================================================================================================================================================
+*CUSTOM MEMORY MANAGEMENT ENGINE( COMPLECTED PROJECT: PARTS 1-7)
+*================================================================================================================================================
+*STATUS: ALL PARTS SUCCESSFULLY IMPLEMENTED & VERIFIED
+*CORE ARCHITECTURE HIGHLIGHTS:
+* - PART 1 & 2 : CONTINUOUS MEMORY ARENA ALLOCATION AND ROUTING MANAGEMENT
+* - PART 3 :  FRAGMENTED BLOCK DEALLOCATION WITH DYNAMIC ADJACENCY COALESCING
+* - PART 4 & 5 :  STRUCTURAL VISUALIZER (ARENA DUMP) & FRAGMENTATION ANALYSIS
+* - PART 6  :  RUNTIME POLICY SWITCHING (FIRST-FIT VS OPTIMIZED BEST-FIT)
+* - PART 7 :  HIGH-PRECISION TELEMETRY BENCHMARKING USING std:: CHRONO
+*AUTHOR :[YASHVI]
+*DEGREE: BACHELOR OF COMPUTER APPLICATIONS (BCA)
+*TECHNOLOGY: C++, MEMORY MANAGMENT, DATA STRUCTURES AND ALGORITHMS
+*================================================================================================================================================
+*/
 /** 
  *@file main.cpp
  *@brief custom fixed-size memory Arena(pool Allocator) for low-latency systems.
@@ -14,6 +27,7 @@
 #include <iostream>
 #include <vector>
 #include <cstddef> // Required for size_t alignment tracking
+#include<chrono>// PART 7: REQUIRED FOR HIGH-PRECISION TIME BENCHMARKING
 using namespace std;
 
 // ENUMS AND STRUCTURE (MUST BE DEFINED FIRST)
@@ -203,6 +217,64 @@ class CustomMemoryManager {
             cout<<"  -> NOTICE: arena is perfectly contiguous. zero fragmentation overhead detected"<<endl;
         }
       }
+      // PART 7: PERFORMANCE BENCHMARKING SUBSYSTEM
+      /** 
+       * @brief PART 7: executes an intense time-tracked stress workload to benchmark strategies.
+       * calculates precision latency in nanoseconds and records allocation failures
+       */
+      void run_performance_benchmark(){
+        cout<<"\n======================================================="<<endl;
+        cout<< "[STARTING PART 7: STRATEGY PERFORMANCE BENCHMARK REPORT]"<<endl;
+        cout<<"========================================================="<<endl;
+        //array storing different playload requests to simulate dynamic workload variations
+        size_t benchmark_requests[]={50,120,30,200,70,150,40,90,110,60};
+        size_t num_requests= sizeof(benchmark_requests)/ sizeof(benchmark_requests[0]);
+        //retain the current orginal strategy state to restore it at the end of the benchmark
+        AllocationStrategy backup_strategy=current_strategy;
+        //array of the strategies to loop throught sequentially for direct comparison
+        AllocationStrategy strategy_to_test[]={FIRST_FIT,BEST_FIT};
+        for(AllocationStrategy strategy: strategy_to_test){
+            // step 7.1: apply target strategy under evalution
+            set_allocation_strategy(strategy);
+            size_t successful_allocation=0;
+            size_t failed_allocation=0;
+            vector<void*> allocated_pointers;//Track pointers to clean up after benchmark run
+            cout<<"\n[BENCHMARKING]: Executing operational stress loop..."<<endl;
+            //step 7.2:capture high-precision hardware clock timestamp BEFORE Execution
+            auto start_time= chrono::high_resolution_clock::now();
+            //step7.3: execute workload sequence loops
+            for(size_t i=0;i<num_requests;++i){
+                size_t current_request_size=benchmark_requests[i];
+                void* allocated_ptr=alloc(current_request_size);
+                if(allocated_ptr!=nullptr){
+                    successful_allocation++;
+                    allocated_pointers.push_back(allocated_ptr);
+                } else{
+                    failed_allocation++;
+                }
+            }
+            //step 7.4: capture high-precision hardware clock timestamp after execution
+            auto end_time=chrono::high_resolution_clock::now();
+            //step 7.5: mathematical calculations of duration in nanoseconds
+            auto total_duration=chrono::duration_cast<chrono::nanoseconds>(end_time-start_time).count();
+            //Display performance telemetry data for the evaluated strategy
+            cout<<"\n[TELEMETRY RESULTS-"<<(strategy == FIRST_FIT?"FIRST-FIT":"BEST-FIT")<<"]:"<<endl;
+            cout<<" -> total workload latency:  "<<total_duration<<"ns"<<endl;
+            cout<<" -> average operationl delay:  "<<(total_duration/num_requests)<<"ns/op"<<endl;
+            cout<<" -> allocation success rate:  "<<successful_allocation<<"/"<<num_requests<<endl;
+            cout<<" -> allocation failure rate "<<failed_allocation<<"/"<<num_requests<<endl;
+            //step7.6:reset structural states by deallocation tracked pointers to prevent test cross-contamination
+            cout<<"[CLEANUP]: flushing benchmark payloads to restore continuous state.."<<endl;
+            for(void* ptr: allocated_pointers){
+                free(ptr);
+            }
+        }
+        //restore orginal operational system state token
+        current_strategy = backup_strategy;
+        cout<<"\n====================================================="<<endl;
+        cout<<"[BENCHMARK COMPLETE: RESTORE ORGINAL OPERATIONAL STATES]"<<endl;
+        cout<<"\n====================================================="<<endl;
+      }
     /** 
      * @brief Destructor-safe release of the shared pool boundary to prevent memory leaks.
      */
@@ -282,7 +354,10 @@ int main(){
     akamai_pool.free(test_bf);
     akamai_pool.free(seperator);
     akamai_pool.free(remainder);
+    //------ PART7 CALL:EXECUTING THE PERFORMANCE BENCHMARK SUBSYSTEM---
+    akamai_pool.run_performance_benchmark();
     cout<<endl;
     return 0;
 }
+
 
